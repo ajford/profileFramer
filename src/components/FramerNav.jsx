@@ -4,6 +4,7 @@ import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import { faCropSimple } from '@fortawesome/free-solid-svg-icons'
+import {faGithub} from "@fortawesome/free-brands-svg-icons";
 
 function FramerNav() {
   return (
@@ -16,8 +17,11 @@ function FramerNav() {
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto">
-            <Nav.Link href="#home">Home</Nav.Link>
+          <Nav className="me-auto" />
+          <Nav>
+            <Nav.Link href="https://github.com/ajford/profileFramer">
+              <FontAwesomeIcon icon={faGithub} size={"xl"} />
+            </Nav.Link>
           </Nav>
         </Navbar.Collapse>
       </Container>
