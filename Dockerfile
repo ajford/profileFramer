@@ -1,13 +1,5 @@
-# Build Stage
-FROM node:22-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+# Use the official Nginx base image
+FROM nginx:alpine
 
-# Production Stage
-FROM nginx:stable-alpine AS production
-COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Copy your static files from the local 'site-content' directory to the Nginx web root
+COPY ./ /usr/share/nginx/html
