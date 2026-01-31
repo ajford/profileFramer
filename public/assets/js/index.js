@@ -2,14 +2,13 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const imageInput = document.getElementById('imageInput');
 const saveBtn = document.getElementById('saveBtn');
+const headerSaveBtn = document.getElementById('headerSaveBtn');
 const emptyState = document.getElementById('emptyState');
 const templateGrid = document.getElementById('templateGrid');
 
 // State
 let userImage = null;
 let overlayImage = null;
-let currentLayer = 'photo';
-let overlayTemplates = [];
 
 let photoState = {
   scale: 1,
@@ -17,14 +16,8 @@ let photoState = {
   y: 0
 };
 
-let overlayState = {
-  scale: 1,
-  x: 0,
-  y: 0
-};
-
 // Canvas setup
-const CANVAS_SIZE = 1024;
+const CANVAS_SIZE = 500;
 canvas.width = CANVAS_SIZE;
 canvas.height = CANVAS_SIZE;
 
@@ -33,32 +26,27 @@ async function loadOverlayTemplates() {
   try {
     const response = await fetch('assets/overlays/overlays.json');
     const data = await response.json();
-    overlayTemplates = data.overlays || [];
-    populateTemplateGrid();
+    const overlayTemplates = data.overlays || [];
+    populateTemplateGrid(overlayTemplates);
   } catch (error) {
     console.error('Error loading overlays:', error);
     // If loading fails, continue with just the "None" option
   }
 }
 
-function populateTemplateGrid() {
+function populateTemplateGrid(overlayTemplates) {
   overlayTemplates.forEach((template, index) => {
     const btn = document.createElement('button');
     btn.className = 'template-btn';
     btn.dataset.template = template.source;
     btn.dataset.templateName = template.name;
 
-    // Create preview image
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = template.source;
-
     btn.innerHTML = `
-                    <span class="icon">
-                        <img src="${template.source}" alt="${template.name}" crossorigin="anonymous" />
-                    </span>
-                    <span class="template-name">${template.name}</span>
-                `;
+            <span class="icon">
+                <img src="${template.source}" alt="${template.name}" crossorigin="anonymous" />
+            </span>
+            <span class="template-name">${template.name}</span>
+        `;
 
     btn.addEventListener('click', () => {
       document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
@@ -81,6 +69,7 @@ imageInput.addEventListener('change', (e) => {
         userImage = img;
         emptyState.style.display = 'none';
         saveBtn.disabled = false;
+        headerSaveBtn.disabled = false;
         render();
       };
       img.src = event.target.result;
@@ -90,23 +79,13 @@ imageInput.addEventListener('change', (e) => {
 });
 
 // Template selection for "None" button
-document.querySelector('[data-template="none"]').addEventListener('click', function() {
+document.querySelector('[data-template="none"]').addEventListener('click', function () {
   document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
   this.classList.add('active');
   loadTemplate('none');
 });
 
-// Layer tabs
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentLayer = btn.dataset.layer;
-    updateSliders();
-  });
-});
-
-// Sliders
+// Sliders - only for photo layer
 const scaleSlider = document.getElementById('scaleSlider');
 const xSlider = document.getElementById('xSlider');
 const ySlider = document.getElementById('ySlider');
@@ -115,51 +94,104 @@ const xValue = document.getElementById('xValue');
 const yValue = document.getElementById('yValue');
 
 scaleSlider.addEventListener('input', (e) => {
-  getCurrentState().scale = e.target.value / 100;
+  const scale = e.target.value / 100;
+  photoState.scale = scale;
   scaleValue.textContent = e.target.value + '%';
   render();
 });
 
 xSlider.addEventListener('input', (e) => {
-  getCurrentState().x = parseInt(e.target.value);
+  photoState.x = parseInt(e.target.value);
   xValue.textContent = e.target.value;
   render();
 });
 
 ySlider.addEventListener('input', (e) => {
-  getCurrentState().y = parseInt(e.target.value);
+  photoState.y = parseInt(e.target.value);
   yValue.textContent = e.target.value;
   render();
 });
 
-function getCurrentState() {
-  return currentLayer === 'photo' ? photoState : overlayState;
-}
-
 function updateSliders() {
-  const state = getCurrentState();
-  scaleSlider.value = state.scale * 100;
-  xSlider.value = state.x;
-  ySlider.value = state.y;
-  scaleValue.textContent = Math.round(state.scale * 100) + '%';
-  xValue.textContent = state.x;
-  yValue.textContent = state.y;
+  // Round scale to nearest 5%
+  const roundedScale = Math.round(photoState.scale * 20) * 5;
+  scaleSlider.value = roundedScale;
+  scaleValue.textContent = roundedScale + '%';
+
+  // Round x and y to nearest 10
+  const roundedX = Math.round(photoState.x / 10) * 10;
+  const roundedY = Math.round(photoState.y / 10) * 10;
+
+  xSlider.value = roundedX;
+  ySlider.value = roundedY;
+  xValue.textContent = roundedX;
+  yValue.textContent = roundedY;
 }
 
-// Touch/mouse dragging
+// Touch/mouse dragging for photo
 let isDragging = false;
 let startX, startY;
 
+// Pinch zoom variables
+let isPinching = false;
+let initialPinchDistance = 0;
+let initialScale = 1;
+
 canvas.addEventListener('mousedown', startDrag);
-canvas.addEventListener('touchstart', startDrag);
+canvas.addEventListener('touchstart', handleTouchStart);
 canvas.addEventListener('mousemove', drag);
-canvas.addEventListener('touchmove', drag);
+canvas.addEventListener('touchmove', handleTouchMove);
 canvas.addEventListener('mouseup', endDrag);
-canvas.addEventListener('touchend', endDrag);
+canvas.addEventListener('touchend', handleTouchEnd);
 canvas.addEventListener('mouseleave', endDrag);
 
+function handleTouchStart(e) {
+  if (e.touches.length === 2) {
+    // Pinch start
+    isPinching = true;
+    isDragging = false;
+    initialPinchDistance = getPinchDistance(e.touches);
+    initialScale = photoState.scale;
+  } else if (e.touches.length === 1) {
+    // Drag start
+    startDrag(e);
+  }
+}
+
+function handleTouchMove(e) {
+  if (isPinching && e.touches.length === 2) {
+    // Pinch zoom
+    e.preventDefault();
+    const currentDistance = getPinchDistance(e.touches);
+    const scaleChange = currentDistance / initialPinchDistance;
+    const newScale = Math.max(0.5, Math.min(2, initialScale * scaleChange));
+
+    photoState.scale = newScale;
+    updateSliders();
+    render();
+  } else if (isDragging && e.touches.length === 1) {
+    // Drag
+    drag(e);
+  }
+}
+
+function handleTouchEnd(e) {
+  if (e.touches.length < 2) {
+    isPinching = false;
+  }
+  if (e.touches.length === 0) {
+    endDrag();
+  }
+}
+
+function getPinchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 function startDrag(e) {
-  if (!userImage) return;
+  if (!userImage || isPinching) return;
   isDragging = true;
   const pos = getEventPosition(e);
   startX = pos.x;
@@ -167,15 +199,14 @@ function startDrag(e) {
 }
 
 function drag(e) {
-  if (!isDragging) return;
+  if (!isDragging || isPinching) return;
   e.preventDefault();
   const pos = getEventPosition(e);
   const deltaX = pos.x - startX;
   const deltaY = pos.y - startY;
 
-  const state = getCurrentState();
-  state.x += deltaX;
-  state.y += deltaY;
+  photoState.x += deltaX;
+  photoState.y += deltaY;
 
   startX = pos.x;
   startY = pos.y;
@@ -254,14 +285,11 @@ function render() {
   ctx.drawImage(userImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
   ctx.restore();
 
-  // Draw overlay
+  // Draw overlay - centered, no transformations
   if (overlayImage && overlayImage.complete) {
     ctx.save();
-    ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
-    ctx.translate(overlayState.x, overlayState.y);
-    ctx.scale(overlayState.scale, overlayState.scale);
 
-    // Scale overlay to fit canvas
+    // Scale overlay to fit canvas while maintaining aspect ratio
     const overlayAspect = overlayImage.width / overlayImage.height;
     let overlayWidth, overlayHeight;
 
@@ -273,13 +301,20 @@ function render() {
       overlayWidth = CANVAS_SIZE * overlayAspect;
     }
 
-    ctx.drawImage(overlayImage, -overlayWidth / 2, -overlayHeight / 2, overlayWidth, overlayHeight);
+    // Center the overlay
+    const overlayX = (CANVAS_SIZE - overlayWidth) / 2;
+    const overlayY = (CANVAS_SIZE - overlayHeight) / 2;
+
+    ctx.drawImage(overlayImage, overlayX, overlayY, overlayWidth, overlayHeight);
     ctx.restore();
   }
 }
 
 // Save
-saveBtn.addEventListener('click', () => {
+saveBtn.addEventListener('click', saveImage);
+headerSaveBtn.addEventListener('click', saveImage);
+
+function saveImage() {
   canvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -288,10 +323,7 @@ saveBtn.addEventListener('click', () => {
     a.click();
     URL.revokeObjectURL(url);
   });
-});
-
-// Initialize
-loadOverlayTemplates();
+}
 
 // Theme toggle functionality
 const themeButtons = document.querySelectorAll('.theme-btn');
@@ -326,3 +358,6 @@ function setTheme(theme) {
     htmlElement.setAttribute('data-theme', theme);
   }
 }
+
+// Initialize
+loadOverlayTemplates();
