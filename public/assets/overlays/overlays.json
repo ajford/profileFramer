@@ -1,0 +1,8 @@
+{
+  "overlays": [
+    {
+      "name": "United We Bargain",
+      "source": "assets/overlays/united_we_bargain.png"
+    }
+  ]
+}
