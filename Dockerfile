@@ -2,4 +2,4 @@
 FROM nginx:alpine
 
 # Copy your static files from the local 'site-content' directory to the Nginx web root
-COPY ./ /usr/share/nginx/html
+COPY public/ /usr/share/nginx/html
