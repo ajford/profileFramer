@@ -24,16 +24,15 @@ they can be hosted elsewhere.
 
 ```
 framer/
-└── public/
-    ├── index.html                   # Main application file
-    └── assets/
-        ├── css/
-        │   └── base.css             # Stylesheet with theme support
-        ├── js/
-        │   └── index.js             # Application logic
-        └── overlays/
-            ├── overlays.json        # Template configuration
-            └── united_we_bargain.png # Example overlay template
+ ├── index.html                   # Main application file
+ └── assets/
+     ├── css/
+     │   └── base.css             # Stylesheet with theme support
+     ├── js/
+     │   └── index.js             # Application logic
+     └── overlays/
+         ├── overlays.json        # Template configuration
+         └── united_we_bargain.png # Example overlay template
 ```
 
 ## Adding Overlay Templates
@@ -126,7 +125,7 @@ or docker host.
 ### Traditional Web Hosting (cPanel, FTP, etc.)
 
 1. Upload files via FTP/SFTP or file manager
-2. Place the files under `public/` in web root (typically `public_html` or `www`)
+2. Place files in web root (typically `public_html` or `www`)
 3. Access `https://yourdomain.com/` (index.html loads automatically)
 
 ### Amazon S3 + CloudFront
