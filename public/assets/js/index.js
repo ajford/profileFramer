@@ -43,7 +43,7 @@ function populateTemplateGrid(overlayTemplates) {
 
     btn.innerHTML = `
             <span class="icon">
-                <img src="assets/overlays/${template.source}" alt="${template.name}" crossorigin="anonymous" />
+                <img src="${template.source}" alt="${template.name}" crossorigin="anonymous" />
             </span>
             <span class="template-name">${template.name}</span>
         `;
